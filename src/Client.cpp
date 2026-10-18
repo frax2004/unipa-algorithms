@@ -1,9 +1,22 @@
-#include <NeedlemanWunshAligner.hpp>
+#include <pattern-discovery-for-life-sciences/NeedlemanWunshAligner.hpp>
 
-using namespace pdls;
 
 auto Main(vector<string_view> args) -> void {
-  auto m1 = vector{
+  if(args.size() != 2) {
+    println("Usage: testing <seq1> <seq2>");
+    return;
+  }
+
+  string s1 { args[0] };
+  string s2 { args[1] };
+
+  pdls::NeedlemanWunshAligner nwa { s1, s2 };
+  pdls::StringAlignment alignment = nwa.getMatchMismatchAlignment(1, 0, 1);
+  
+  println("MatchMismatchAlignment(\"{}\", \"{}\") = ", s1, s2);
+  println("{}", alignment.toString());
+
+  vector m1 = {
     3, 1 , 4 , 6, 5, 1, 2, 2 , 2, 9, 3, 3 , 2 , 3, 6, 1 , 2, 3,
     8, 2 , 3 , 3, 3, 3, 3, 2 , 4, 3, 8, 2 , 2 , 4, 3, 3 , 3, 4,
     2, 10, 1 , 1, 1, 4, 4, 1 , 3, 1, 2, 7 , 5 , 2, 1, 2 , 4, 2,
@@ -20,18 +33,5 @@ auto Main(vector<string_view> args) -> void {
     2, 7 , 1 , 2, 2, 3, 3, 1 , 3, 3, 2, 10, 6 , 2, 2, 2 , 3, 2
   };
 
-  if(args.size() != 2) {
-    println("Usage: testing <seq1> <seq2>");
-    return;
-  }
 
-  auto s1 = string{ args[0] };
-  auto s2 = string{ args[1] };
-
-  println("Align({}, {}) = ", s1, s2);
-
-  auto nwa = NeedlemanWunshAligner{ s1, s2 };
-  StringAlignment alignment = nwa.getMatchMismatchAlignment(1, 0, 1);
-
-  println("{}", alignment.toString());
 }
