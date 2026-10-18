@@ -2,7 +2,6 @@ cmake_minimum_required(VERSION 3.30.0)
 
 project(testing LANGUAGES C CXX)
 
-set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -17,8 +16,8 @@ if(raylib_FOUND)
 else()
   message(FATAL_ERROR "Raylib could not be located. Please install raylib")
 endif()
-  
-file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+
+file(GLOB_RECURSE SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 add_executable(testing)
 

@@ -1,4 +1,4 @@
-#include <NeedlemanWunshAligner.hpp>
+#include <pattern-discovery-for-life-sciences/NeedlemanWunshAligner.hpp>
 
 namespace pdls {
   NeedlemanWunshAligner::NeedlemanWunshAligner(string column, string row)
@@ -40,6 +40,7 @@ namespace pdls {
     auto $ = [table](i64 i, i64 j) -> i32 {
       return i < 0 or j < 0 ? 0 : table[i, j];
     };
+
 
     // Pre-process
     for(i64 i : views::indices(table.extent(0))) {

@@ -1,4 +1,4 @@
-#include <StringAlignment.hpp>
+#include <pattern-discovery-for-life-sciences/StringAlignment.hpp>
 
 namespace pdls {
   StringAlignment::StringAlignment(string first, string second)
