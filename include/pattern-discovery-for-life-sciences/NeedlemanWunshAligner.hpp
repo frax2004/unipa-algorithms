@@ -15,7 +15,7 @@ public:
 
   auto getFirst() const -> string_view;
   auto getSecond() const -> string_view;
-  auto getMatchMismatchAlignment(i32 match, i32 mismatch, i32 gapPenalty) const -> StringAlignment;
+  auto align(i32 match, i32 mismatch, i32 gapPenalty) const -> vector<StringAlignment>;
 
 private:
   enum class Direction : u8 {

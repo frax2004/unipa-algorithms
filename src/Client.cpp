@@ -11,8 +11,8 @@ auto Main(vector<string_view> args) -> void {
   string s2 { args[1] };
 
   pdls::NeedlemanWunshAligner nwa { s1, s2 };
-  pdls::StringAlignment alignment = nwa.getMatchMismatchAlignment(1, 0, 1);
-  
+  pdls::StringAlignment alignment = nwa.align(1, 0, 1);
+
   println("MatchMismatchAlignment(\"{}\", \"{}\") = ", s1, s2);
   println("{}", alignment.toString());
 
