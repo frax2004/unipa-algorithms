@@ -11,10 +11,11 @@ auto Main(vector<string_view> args) -> void {
   string s2 { args[1] };
 
   pdls::NeedlemanWunshAligner nwa { s1, s2 };
-  pdls::StringAlignment alignment = nwa.align(1, 0, 1);
+  vector<pdls::StringAlignment> alignments = nwa.align(1, 0, 1);
 
-  println("MatchMismatchAlignment(\"{}\", \"{}\") = ", s1, s2);
-  println("{}", alignment.toString());
+
+  for(auto x: alignments | views::transform(pdls::StringAlignment::toString))
+    println("MatchMismatchAlignment(\"{}\", \"{}\") =\n{}", s1, s2, x);
 
   vector m1 = {
     3, 1 , 4 , 6, 5, 1, 2, 2 , 2, 9, 3, 3 , 2 , 3, 6, 1 , 2, 3,
