@@ -13,7 +13,6 @@ auto Main(vector<string_view> args) -> void {
   pdls::NeedlemanWunshAligner nwa { s1, s2 };
   vector<pdls::StringAlignment> alignments = nwa.align(1, 0, 1);
 
-
   for(auto x: alignments | views::transform(pdls::StringAlignment::toString))
     println("MatchMismatchAlignment(\"{}\", \"{}\") =\n{}", s1, s2, x);
 

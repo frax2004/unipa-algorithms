@@ -76,71 +76,91 @@ auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const
     return table[i, j] == table[iMax, jMax];
   };
 
-  auto traceback = [&](tuple<u64, u64> index) -> StringAlignment {
-    auto [iMax, jMax] = index;
 
-    string s1 = "";
-    string s2 = "";
-
-    u64 i = iMax;
-    u64 j = jMax;
-
-    // Perform traceback
-    while(i > 0 and j > 0) {
-
-      Direction cameFrom = NeedlemanWunshAligner::getDirectionOf(
-        table[i-1, j] - gapPenalty,
-        table[i-1, j-1] + score(first[i-1], second[j-1]),
-        table[i, j-1] - gapPenalty
+  auto traceback = [&](this auto&& self, vector<StringAlignment>& alignments, u64 i, u64 j, string s1, string s2) -> void {
+    if(i == 0 or j == 0) {
+      // base case
+      alignments.push_back({
+        views::concat(
+          s1,
+          first.subview(0, i) | views::reverse,
+          views::repeat(' ', j)
+        )
+        | views::reverse
+        | ranges::to<string>(),
+        views::concat(
+          s2,
+          second.subview(0, j) | views::reverse,
+          views::repeat(' ', i)
+        )
+        | views::reverse
+        | ranges::to<string>(),
+      });
+    } else {
+      i64 max = ranges::max(
+        array{
+          table[i-1, j] - gapPenalty,
+          table[i-1, j-1] + score(first[i-1], second[j-1]),
+          table[i, j-1] - gapPenalty
+        }
       );
+      
+      struct direction_info {
+        u64 i, j;
+        i64 value;
+        Direction direction;
+      };
 
-      switch(cameFrom) {
-        case Direction::TOP: {
-          s2.push_back(0 < j or j < N ? '-' : ' ');
-          s1.push_back(first[--i]);
-          break;
-        } case Direction::LEFT: {
-          s2.push_back(second[--j]);
-          s1.push_back(0 < i or i < M ? '-' : ' ');
-          break;
-        } case Direction::TOP_LEFT: {
-          s2.push_back(second[--j]);
-          s1.push_back(first[--i]);
-          break;
-        } default: break;
+      auto dinfo = array{
+        direction_info{ i-1, j, table[i-1, j] - gapPenalty, Direction::TOP },
+        direction_info{ i-1, j-1, table[i-1, j-1] + score(first[i-1], second[j-1]), Direction::TOP_LEFT },
+        direction_info{ i, j-1, table[i, j-1] - gapPenalty, Direction::LEFT }
+      };
+
+      for(auto info : dinfo) {
+        if(info.value != max) continue;
+
+        switch(info.direction) {
+          case Direction::TOP: {
+            self(alignments, info.i, info.j, s1 + first[i-1], s2 + (0 < j or j < N ? '-' : ' '));
+            break;
+          } case Direction::LEFT: {
+            self(alignments, info.i, info.j, s1 + (0 < i or i < M ? '-' : ' '), s2 + second[j-1]);
+            break;
+          } case Direction::TOP_LEFT: {
+            self(alignments, info.i, info.j, s1 + first[i-1], s2 + second[j-1]);
+            break;
+          } default: break;
+        }
       }
-
     }
-
-    return StringAlignment{
-      views::concat(
-        first.subview(iMax) | views::reverse,
-        s1,
-        first.subview(0, i) | views::reverse,
-        views::repeat(' ', j)
-      )
-      | views::reverse
-      | ranges::to<string>(),
-      views::concat(
-        second.subview(jMax) | views::reverse,
-        s2,
-        second.subview(0, j) | views::reverse,
-        views::repeat(' ', i)
-      )
-      | views::reverse
-      | ranges::to<string>(),
-    };
   };
 
-  return views::concat(
+  vector<StringAlignment> bestAlignments { };
+
+  auto indexes = views::concat(
     views::cartesian_product(views::single(M), views::iota(1ULL, N)),
     views::cartesian_product(views::iota(1ULL, M), views::single(N)),
     views::single(tuple{ M, N })
   ) 
-  | views::filter(containsMax)
-  | views::transform(traceback)
-  | ranges::to<vector>();
+  | views::filter(containsMax);
 
+
+  for(auto [i, j] : indexes) {
+    traceback(
+      bestAlignments, 
+      i, 
+      j, 
+      first.substr(i-1) 
+      | views::reverse 
+      | ranges::to<string>(), 
+      second.substr(j-1) 
+      | views::reverse 
+      | ranges::to<string>()
+    );
+  }
+
+  return bestAlignments;
 }
 
 }
