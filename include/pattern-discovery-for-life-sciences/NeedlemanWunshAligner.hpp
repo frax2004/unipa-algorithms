@@ -17,16 +17,6 @@ public:
   auto getSecond() const -> string_view;
   auto align(i32 match, i32 mismatch, i32 gapPenalty) const -> vector<StringAlignment>;
 
-private:
-  enum class Direction : u8 {
-    TOP,
-    TOP_LEFT,
-    LEFT,
-    UNKNOWN,
-  };
-
-  static auto getDirectionOf(i32 top, i32 topLeft, i32 left) -> Direction;
-
 }; // class NeedlemanWunshAligner
 
 } // namespace pdls
