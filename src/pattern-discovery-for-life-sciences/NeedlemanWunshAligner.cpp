@@ -44,7 +44,7 @@ auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const
   auto table = mdspan{ values.data(), M+1, N+1 };
 
   auto score = [match, mismatch](char x, char y) -> i32 {
-    return x == y and x != '-' and x != ' ' ? match : mismatch;
+    return x == y ? match : mismatch;
   };
 
   u64 iMax = M;
@@ -77,10 +77,10 @@ auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const
   };
 
 
-  auto traceback = [&](this auto&& self, vector<StringAlignment>& alignments, u64 i, u64 j, string s1, string s2) -> void {
+  auto traceback = [&](this auto&& self, u64 i, u64 j, string s1, string s2) -> generator<StringAlignment> {
     if(i == 0 or j == 0) {
       // base case
-      alignments.push_back({
+      co_yield StringAlignment{
         views::concat(
           s1,
           first.subview(0, i) | views::reverse,
@@ -95,7 +95,7 @@ auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const
         )
         | views::reverse
         | ranges::to<string>(),
-      });
+      };
     } else {
       i64 max = ranges::max(
         array{
@@ -105,30 +105,25 @@ auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const
         }
       );
       
-      struct direction_info {
-        u64 i, j;
-        i64 value;
-        Direction direction;
-      };
 
       auto dinfo = array{
-        direction_info{ i-1, j, table[i-1, j] - gapPenalty, Direction::TOP },
-        direction_info{ i-1, j-1, table[i-1, j-1] + score(first[i-1], second[j-1]), Direction::TOP_LEFT },
-        direction_info{ i, j-1, table[i, j-1] - gapPenalty, Direction::LEFT }
+        pair{ table[i-1, j] - gapPenalty, Direction::TOP },
+        pair{ table[i-1, j-1] + score(first[i-1], second[j-1]), Direction::TOP_LEFT },
+        pair{ table[i, j-1] - gapPenalty, Direction::LEFT }
       };
 
       for(auto info : dinfo) {
-        if(info.value != max) continue;
+        if(info.first != max) continue;
 
-        switch(info.direction) {
+        switch(info.second) {
           case Direction::TOP: {
-            self(alignments, info.i, info.j, s1 + first[i-1], s2 + (0 < j or j < N ? '-' : ' '));
+            co_yield ranges::elements_of(self(i-1, j, s1 + first[i-1], s2 + '-'));
             break;
           } case Direction::LEFT: {
-            self(alignments, info.i, info.j, s1 + (0 < i or i < M ? '-' : ' '), s2 + second[j-1]);
+            co_yield ranges::elements_of(self(i, j-1, s1 + '-', s2 + second[j-1]));
             break;
           } case Direction::TOP_LEFT: {
-            self(alignments, info.i, info.j, s1 + first[i-1], s2 + second[j-1]);
+            co_yield ranges::elements_of(self(i-1, j-1, s1 + first[i-1], s2 + second[j-1]));
             break;
           } default: break;
         }
@@ -136,31 +131,29 @@ auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const
     }
   };
 
-  vector<StringAlignment> bestAlignments { };
+  auto doTraceback = [&](tuple<u64, u64> index) -> generator<StringAlignment> {
+    auto [i, j] = index;
+    return traceback(
+      i, 
+      j, 
+      first.substr(i) 
+      | views::reverse 
+      | ranges::to<string>(), 
+      second.substr(j) 
+      | views::reverse 
+      | ranges::to<string>()
+    );
+  };
 
-  auto indexes = views::concat(
+  return views::concat(
     views::cartesian_product(views::single(M), views::iota(1ULL, N)),
     views::cartesian_product(views::iota(1ULL, M), views::single(N)),
     views::single(tuple{ M, N })
   ) 
-  | views::filter(containsMax);
-
-
-  for(auto [i, j] : indexes) {
-    traceback(
-      bestAlignments, 
-      i, 
-      j, 
-      first.substr(i-1) 
-      | views::reverse 
-      | ranges::to<string>(), 
-      second.substr(j-1) 
-      | views::reverse 
-      | ranges::to<string>()
-    );
-  }
-
-  return bestAlignments;
+  | views::filter(containsMax)
+  | views::transform(doTraceback)
+  | views::join
+  | ranges::to<vector>();
 }
 
 }

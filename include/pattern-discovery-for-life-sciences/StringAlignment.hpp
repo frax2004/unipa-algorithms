@@ -10,6 +10,7 @@ namespace pdls {
 
     public:
     StringAlignment(string first, string second);
+    StringAlignment(StringAlignment const&) = default;
 
     public:
     auto matches() const -> size_t;
