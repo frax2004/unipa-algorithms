@@ -1,17 +1,19 @@
 #include <pattern-discovery-for-life-sciences/NeedlemanWunshAligner.hpp>
 
-
 auto Main(vector<string_view> args) -> void {
-  if(args.size() != 2) {
-    println("Usage: testing <seq1> <seq2>");
+  if(args.size() != 5) {
+    println("Usage: testing <seq1> <seq2> <match> <mismatch> <gap>");
     return;
   }
 
   string s1 { args[0] };
   string s2 { args[1] };
+  i32 match = std::stoi(string{ args[2] });
+  i32 mismatch = std::stoi(string{ args[3] });
+  i32 gapPenalty = std::stoi(string{ args[4] });
 
   pdls::NeedlemanWunshAligner nwa { s1, s2 };
-  vector<pdls::StringAlignment> alignments = nwa.align(1, 0, 1);
+  vector<pdls::StringAlignment> alignments = nwa.align(match, mismatch, gapPenalty);
 
   for(auto x: alignments | views::transform(pdls::StringAlignment::toString))
     println("MatchMismatchAlignment(\"{}\", \"{}\") =\n{}", s1, s2, x);
@@ -33,5 +35,8 @@ auto Main(vector<string_view> args) -> void {
     2, 7 , 1 , 2, 2, 3, 3, 1 , 3, 3, 2, 10, 6 , 2, 2, 2 , 3, 2
   };
 
+  alignments = nwa.align(gapPenalty, m1);
 
+  for(auto x: alignments | views::transform(pdls::StringAlignment::toString))
+    println("SubstitutionMatrixAlignment(\"{}\", \"{}\") =\n{}", s1, s2, x);
 }

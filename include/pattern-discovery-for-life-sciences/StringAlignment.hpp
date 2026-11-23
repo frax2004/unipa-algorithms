@@ -3,22 +3,22 @@
 
 namespace pdls {
 
-  struct StringAlignment {
-    private:
-    string mFirst = "";
-    string mSecond = "";
+class StringAlignment final {
+private:
+  string mFirst = "";
+  string mSecond = "";
 
-    public:
-    StringAlignment(string first, string second);
-    StringAlignment(StringAlignment const&) = default;
+public:
+  StringAlignment(string first, string second);
+  StringAlignment(StringAlignment const&) = default;
 
-    public:
-    auto matches() const -> size_t;
-    auto mismatches() const -> size_t;
-    auto getFirst() const -> string_view;
-    auto getSecond() const -> string_view;
+public:
+  auto matches() const -> size_t;
+  auto mismatches() const -> size_t;
+  auto getFirst() const -> string_view;
+  auto getSecond() const -> string_view;
 
-    auto toString() const -> string;
-  };
+  auto toString() const -> string;
+}; // class StringAlignment
 
-}
+} // namespace pdls

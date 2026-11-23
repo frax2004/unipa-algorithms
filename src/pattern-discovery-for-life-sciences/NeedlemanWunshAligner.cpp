@@ -1,8 +1,8 @@
 #include <pattern-discovery-for-life-sciences/NeedlemanWunshAligner.hpp>
+#include <cassert>
 
 
 namespace pdls {
-
 
 NeedlemanWunshAligner::NeedlemanWunshAligner(string column, string row)
   : mRow { row }
@@ -21,7 +21,101 @@ auto NeedlemanWunshAligner::getSecond() const -> string_view {
   return this->mRow;
 }
 
+auto NeedlemanWunshAligner::align(i32 gapPenalty, vector<i32> substitutionMatrix) const -> vector<StringAlignment> {
+  string_view first = this->getFirst();
+  string_view second = this->getSecond();
+  u64 M = first.length();
+  u64 N = second.length();
+  assert(substitutionMatrix.size() == M * N && "Substitution matrix must have len(s1) * len(s2) elements");
 
+  if(M == 0 or N == 0) {
+    return {
+      StringAlignment{
+        M == 0 ? string(N, ' ') : string(first),
+        N == 0 ? string(M, ' ') : string(second)
+      }
+    };
+  }
+
+  vector<i32> values((M + 1) * (N + 1), 0);
+
+  auto table = mdspan{ values.data(), M + 1, N + 1 };
+  auto subMatrixTable = mdspan{ substitutionMatrix.data(), M, N };
+
+  i32 maxScore = numeric_limits<i32>::min();
+
+  for (u64 i : views::iota(1ULL, M + 1)) {
+    for (u64 j : views::iota(1ULL, N + 1)) {
+      table[i, j] = ranges::max({
+        table[i - 1, j] - gapPenalty,
+        table[i - 1, j - 1] + subMatrixTable[i - 1, j - 1],
+        table[i, j - 1] - gapPenalty
+      });
+
+      if((i == M or j == N) and table[i, j] > maxScore) {
+        maxScore = table[i, j];
+      }
+    }
+  }
+
+  auto containsMax = [&](tuple<u64, u64> index) -> bool {
+    auto [i, j] = index;
+    return table[i, j] == maxScore;
+  };
+
+  auto traceback = [&](this auto&& self, u64 i, u64 j, string s1, string s2) -> generator<StringAlignment> {
+    if(i == 0 or j == 0) { // base case
+      co_yield StringAlignment{
+        views::concat(
+          s1,
+          first.substr(0, i) | views::reverse,
+          views::repeat(' ', j)
+        ) | views::reverse | ranges::to<string>(),
+        views::concat(
+          s2,
+          second.substr(0, j) | views::reverse,
+          views::repeat(' ', i)
+        ) | views::reverse | ranges::to<string>()
+      };
+    } else {
+      if(table[i - 1, j] - gapPenalty == table[i, j]) { // top
+        co_yield ranges::elements_of(self(i - 1, j, s1 + first[i - 1], s2 + '-'));
+      }
+      if(table[i, j - 1] - gapPenalty == table[i, j]) { // left
+        co_yield ranges::elements_of(self(i, j - 1, s1 + '-', s2 + second[j - 1]));
+      }
+      if(table[i - 1, j - 1] + subMatrixTable[i - 1, j - 1] == table[i, j]) { // top-left
+        co_yield ranges::elements_of(self(i - 1, j - 1, s1 + first[i - 1], s2 + second[j - 1]));
+      }
+    }
+  };
+
+  auto doTraceback = [&](tuple<u64, u64> index) -> generator<StringAlignment> {
+    auto [i, j] = index;
+    return traceback(
+      i,
+      j,
+      views::concat(
+        first.substr(i) | views::reverse,
+        views::repeat(' ', N - j)
+      ) | ranges::to<string>(),
+      views::concat(
+        second.substr(j) | views::reverse,
+        views::repeat(' ', M - i)
+      ) | ranges::to<string>()
+    );
+  };
+
+  return views::concat(
+    views::cartesian_product(views::single(M), views::iota(1ULL, N)),
+    views::cartesian_product(views::iota(1ULL, M), views::single(N)),
+    views::single(tuple{ M, N })
+  )
+  | views::filter(containsMax)
+  | views::transform(doTraceback)
+  | views::join
+  | ranges::to<vector>();
+}
 
 auto NeedlemanWunshAligner::align(i32 match, i32 mismatch, i32 gapPenalty) const -> vector<StringAlignment> {
   string_view first = this->getFirst();
